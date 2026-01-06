@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحليل المخالفات - بن شجاع</title>
+    <link rel="icon" type="image/x-icon" href="download.png">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #2d3748;
+            min-height: 100vh;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow-x: hidden;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            background: linear-gradient(135deg, #fff 0%, #e0e7ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            font-weight: 800;
+        }
+        .upload-section {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%);
+            padding: 25px;
+            border-radius: 24px;
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.35);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .upload-box {
+            border: 3px dashed #667eea;
+            border-radius: 20px;
+            padding: 30px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        .upload-box:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+            border-color: #8b5cf6;
+            transform: scale(1.03);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.3);
+        }
+        .btn-upload {
+            background: linear-gradient(135deg, #667eea 0%, #8b5cf6 100%);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 60px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 700;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 15px 35px rgba(102, 126, 234, 0.5);
+            margin-top: 15px;
+            display: inline-block;
+        }
+        .btn-upload:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 25px 50px rgba(102, 126, 234, 0.7);
+            background: linear-gradient(135deg, #7c8de3 0%, #9c7af0 100%);
+        }
+        .filters {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%);
+            padding: 25px;
+            border-radius: 24px;
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.35);
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .filter-group label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #4f46e5;
+        }
+        .filter-group select {
+            padding: 10px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 15px;
+            font-weight: 500;
+            color: #334155;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
+            backdrop-filter: blur(15px);
+            padding: 25px;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .stat-card h3 {
+            font-size: 14px;
+            color: #4f46e5;
+            margin-bottom: 10px;
+        }
+        .stat-card p {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        .chart-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .chart-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
+            backdrop-filter: blur(15px);
+            padding: 25px;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            height: 450px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .chart-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 35px 80px rgba(0, 0, 0, 0.35);
+        }
+        .chart-card canvas {
+            max-height: 350px;
+        }
+        .table-container {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
+            backdrop-filter: blur(15px);
+            padding: 25px;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            overflow-x: auto;
+            animation: fadeInUp 0.8s ease 0.4s backwards;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: right;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #8b5cf6 100%);
+            color: white;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 1px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        tr:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            transform: scale(1.01);
+            transition: all 0.3s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>لوحة تحليل المخالفات - بن شجاع</h1>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="upload-section" id="uploadSection">
+            <div class="upload-box" id="autoLoadBox">
+                <div style="font-size: 40px; color: #4f46e5;">📊</div>
+                <h2 style="margin-bottom: 10px; color: #4f46e5;">لوحة تحليل المخالفات التلقائية</h2>
+                <p style="color: #64748b; margin-bottom: 20px;">يتم تحميل البيانات تلقائيًا من قاعدة البيانات عبر الإنترنت</p>
+                <button class="btn-upload" id="loadDataButton" onclick="loadDataFromAPI()">
+                    🔄 تحميل البيانات الآن
+                </button>
+            </div>
+        </div>
+
+        <!-- Filters Section -->
+        <div class="filters" id="filters" style="display: none;">
+            <div class="filter-group">
+                <label>المهندس</label>
+                <select id="engineerFilter" onchange="updateAnalysis()">
+                    <option value="all">جميع المهندسين</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>نوع الاسكيم</label>
+                <select id="schemeFilter" onchange="updateAnalysis()">
+                    <option value="all">جميع الأنواع</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>حالة الفاتورة</label>
+                <select id="statusFilter" onchange="updateAnalysis()">
+                    <option value="all">جميع الحالات</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>المنطقة</label>
+                <select id="regionFilter" onchange="updateAnalysis()">
+                    <option value="all">جميع المناطق</option>
+                    <option value="الدرعية+عرقة">الدرعية وعرقة</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>الشهر</label>
+                <select id="monthFilter" onchange="updateAnalysis()">
+                    <option value="all">جميع الأشهر</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="stats-grid" id="statsGrid" style="display: none;">
+            <div class="stat-card">
+                <h3>عدد المهندسين</h3>
+                <p id="totalEngineers">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>غير مسددة</h3>
+                <p id="unpaidCount">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>إجمالي القيمة</h3>
+                <p id="totalValue">0 ر.س</p>
+            </div>
+            <div class="stat-card">
+                <h3>إجمالي المخالفات</h3>
+                <p id="totalViolations">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>بلا قيمة</h3>
+                <p id="zeroValueCount">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>مسددة</h3>
+                <p id="paidCount">0</p>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="chart-container" id="chartsContainer" style="display: none;">
+            <div class="chart-card">
+                <canvas id="engineerChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <canvas id="regionChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <canvas id="schemeChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <canvas id="violationTypeChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Table Section -->
+        <div class="table-container" id="tableContainer" style="display: none;">
+            <h3 style="margin-bottom: 20px; color: #4f46e5;">جدول المخالفات التفصيلي</h3>
+            <table id="dataTable">
+                <thead>
+                    <tr>
+                        <th>م</th>
+                        <th>المحافظة</th>
+                        <th>رقم المخالفة</th>
+                        <th>قيمة المخالفة</th>
+                        <th>تاريخ الرصد</th>
+                        <th>حالة الفاتورة</th>
+                        <th>تاريخ الاغتراض</th>
+                        <th>نوع الاسكيم</th>
+                        <th>رقم شجاع</th>
+                        <th>المهندس</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <!-- Download Button -->
+        <div style="text-align: center; margin-top: 20px;">
+            <button class="btn-upload" onclick="downloadChartsAsImage()">⬇️ تنزيل كصورة</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://sheetdb.io/api/v1/l83edeg6hm5d0';
+        let allData = [];
+        let charts = {};
+
+        async function loadDataFromAPI() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) {
+                    throw new Error(`خطأ في استجابة الخادم: ${response.status} ${response.statusText}`);
+                }
+                const jsonData = await response.json();
+                if (!jsonData || !Array.isArray(jsonData)) {
+                    throw new Error('بيانات API غير صالحة: يجب أن تكون مصفوفة');
+                }
+
+                // Process Data - معالجة البيانات
+                allData = jsonData.map(row => {
+                    let value = parseFloat(String(row['قيمة المخالفة'] || '0').replace(/,/g, '')) || 0;
+                    let dateStr = row['تاريخ رصد المخالفة'] || '';
+                    let month = '';
+                    if (dateStr) {
+                        const dateParts = dateStr.split('/');
+                        if (dateParts.length >= 2) month = dateParts[1];
+                    }
+                    let schemeType = row['نوع الاسكيم'] || '';
+                    // 👇 دمج عرقة و الدرعية في نوع الاسكيم
+                    if (schemeType === 'عرقة' || schemeType === 'الدرعيه') {
+                        schemeType = 'عرقة+الدرعية';
+                    }
+                    
+                    // 👇 دمج منطقتي الدرعية وعرقة في منطقة واحدة للعرض
+                    let displayRegion = row['المنطقة'] || '';
+                    if (displayRegion === 'الدرعية' || displayRegion === 'عرقة') {
+                        displayRegion = 'الدرعية وعرقة';
+                    }
+                    
+                    return {
+                        id: row['م'] || '',
+                        violationNumber: row['رقم المخالفة'] || '',
+                        description: row['وصف المخالفة'] || '',
+                        value: value,
+                        date: dateStr,
+                        month: month,
+                        originalRegion: row['المنطقة'] || '', // حفظ المنطقة الأصلية
+                        region: displayRegion, // المنطقة المعدلة للعرض
+                        invoiceStatus: row['حالة الفاتورة'] || '-',
+                        schemeType: schemeType,
+                        engineer: row['المهندس المسؤل'] || ''
+                    };
+                }).filter(row => row.violationNumber);
+
+                // Update UI
+                document.getElementById('uploadSection').style.display = 'none';
+                document.getElementById('filters').style.display = 'grid';
+                document.getElementById('statsGrid').style.display = 'grid';
+                document.getElementById('chartsContainer').style.display = 'grid';
+                document.getElementById('tableContainer').style.display = 'block';
+                initializeFilters();
+                updateAnalysis();
+            } catch (error) {
+                console.error('خطأ في تحميل البيانات:', error);
+                alert(`خطأ: ${error.message}`);
+            }
+        }
+
+        function initializeFilters() {
+            const engineers = [...new Set(allData.map(row => row.engineer))].filter(Boolean);
+            const schemes = [...new Set(allData.map(row => row.schemeType))].filter(Boolean);
+            const statuses = [...new Set(allData.map(row => row.invoiceStatus))].filter(Boolean);
+            const months = [...new Set(allData.map(row => row.month))].filter(Boolean);
+            
+            // إنشاء قائمة المناطق الفريدة (بعد الدمج)
+            const regions = [...new Set(allData.map(row => row.region))].filter(Boolean);
+
+            const engineerSelect = document.getElementById('engineerFilter');
+            const schemeSelect = document.getElementById('schemeFilter');
+            const statusSelect = document.getElementById('statusFilter');
+            const regionSelect = document.getElementById('regionFilter');
+            const monthSelect = document.getElementById('monthFilter');
+
+            engineerSelect.innerHTML = '<option value="all">جميع المهندسين</option>' + engineers.map(e => `<option value="${e}">${e}</option>`).join('');
+            schemeSelect.innerHTML = '<option value="all">جميع الأنواع</option>' + schemes.map(s => `<option value="${s}">${s}</option>`).join('');
+            statusSelect.innerHTML = '<option value="all">جميع الحالات</option>' + statuses.map(s => `<option value="${s}">${s}</option>`).join('');
+            
+            // منطقة واحدة تجمع الدرعية وعرجة
+            regionSelect.innerHTML = '<option value="all">جميع المناطق</option>' + regions.map(r => `<option value="${r}">${r}</option>`).join('');
+            
+            monthSelect.innerHTML = '<option value="all">جميع الأشهر</option>' + months.map(m => `<option value="${m}">${m}</option>`).join('');
+        }
+
+        function getFilteredData() {
+            const month = document.getElementById('monthFilter')?.value || 'all';
+            const engineer = document.getElementById('engineerFilter')?.value || 'all';
+            const region = document.getElementById('regionFilter')?.value || 'all';
+            const status = document.getElementById('statusFilter')?.value || 'all';
+            const scheme = document.getElementById('schemeFilter')?.value || 'all';
+
+            return allData.filter(row => {
+                const matchesMonth = month === 'all' || row.month === month;
+                const matchesEngineer = engineer === 'all' || row.engineer === engineer;
+                const matchesStatus = status === 'all' || row.invoiceStatus === status;
+                const matchesScheme = scheme === 'all' || row.schemeType === scheme;
+                
+                // معالجة فلتر المناطق - إذا اختار "الدرعية وعرجة" نعرض كلا المنطقتين
+                let matchesRegion = region === 'all';
+                if (region === 'الدرعية وعرقة') {
+                    matchesRegion = row.originalRegion === 'الدرعية' || row.originalRegion === 'عرقة';
+                } else if (region !== 'all') {
+                    matchesRegion = row.region === region;
+                }
+                
+                return matchesMonth && matchesEngineer && matchesRegion && matchesStatus && matchesScheme;
+            });
+        }
+
+        function updateAnalysis() {
+            const data = getFilteredData();
+            updateStats(data);
+            updateCharts(data);
+            updateTable(data);
+        }
+
+        function updateStats(data) {
+            const totalViolations = data.length;
+            const totalValue = data.reduce((sum, row) => sum + row.value, 0);
+            const unpaidCount = data.filter(row => row.invoiceStatus === 'غير مسددة').length;
+            const paidCount = data.filter(row => row.invoiceStatus === 'مسددة').length;
+            const zeroValueCount = data.filter(row => row.value === 0).length;
+            const totalEngineers = [...new Set(data.map(row => row.engineer))].length;
+
+            document.getElementById('totalViolations').textContent = totalViolations.toLocaleString();
+            document.getElementById('totalValue').textContent = `${totalValue.toLocaleString()} ر.س`;
+            document.getElementById('unpaidCount').textContent = unpaidCount.toLocaleString();
+            document.getElementById('paidCount').textContent = paidCount.toLocaleString();
+            document.getElementById('zeroValueCount').textContent = zeroValueCount.toLocaleString();
+            document.getElementById('totalEngineers').textContent = totalEngineers.toLocaleString();
+        }
+
+        function updateCharts(data) {
+            // Chart 1: Engineer Combo Chart - Bars for violations, Line for value
+            const engineerCounts = {};
+            const engineerValues = {};
+            data.forEach(row => {
+                engineerCounts[row.engineer] = (engineerCounts[row.engineer] || 0) + 1;
+                engineerValues[row.engineer] = (engineerValues[row.engineer] || 0) + row.value;
+            });
+            
+            // ترتيب المهندسين حسب عدد المخالفات تنازلياً
+            const engineerEntries = Object.entries(engineerCounts).sort((a, b) => b[1] - a[1]);
+            const engineerLabels = engineerEntries.map(([l]) => l);
+            const engineerCountsData = engineerEntries.map(([_, v]) => v);
+            const engineerValuesData = engineerLabels.map(l => engineerValues[l]);
+
+            if (charts.engineer) charts.engineer.destroy();
+            const engineerCtx = document.getElementById('engineerChart').getContext('2d');
+            charts.engineer = new Chart(engineerCtx, {
+                type: 'bar',
+                data: {
+                    labels: engineerLabels,
+                    datasets: [
+                        {
+                            label: 'عدد المخالفات',
+                            type: 'bar',
+                            data: engineerCountsData,
+                            backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 2,
+                            borderRadius: 5,
+                            order: 2
+                        },
+                        {
+                            label: 'إجمالي القيمة (ر.س)',
+                            type: 'line',
+                            data: engineerValuesData,
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 3,
+                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                            fill: false,
+                            tension: 0.4,
+                            pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+                            pointRadius: 6,
+                            pointHoverRadius: 8,
+                            order: 1,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { 
+                            display: true, 
+                            position: 'top',
+                            rtl: true,
+                            labels: {
+                                font: {
+                                    family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                                    size: 14
+                                },
+                                padding: 20
+                            }
+                        },
+                        title: { 
+                            display: true, 
+                            text: 'المخالفات حسب المهندس', 
+                            font: { 
+                                size: 20, 
+                                weight: 'bold',
+                                family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                            }, 
+                            padding: {
+                                top: 10,
+                                bottom: 30
+                            },
+                            color: '#4f46e5'
+                        },
+                        tooltip: {
+                            rtl: true,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.datasetIndex === 0) {
+                                        label += context.raw.toLocaleString() + ' مخالفة';
+                                    } else {
+                                        label += context.raw.toLocaleString() + ' ر.س';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                font: {
+                                    size: 12,
+                                    family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                                }
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'عدد المخالفات',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                },
+                                color: 'rgba(54, 162, 235, 1)'
+                            },
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString();
+                                },
+                                font: {
+                                    size: 12
+                                }
+                            },
+                            grid: {
+                                drawBorder: false
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'القيمة (ر.س)',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                },
+                                color: 'rgba(255, 99, 132, 1)'
+                            },
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString() + ' ر.س';
+                                },
+                                font: {
+                                    size: 12
+                                }
+                            },
+                            grid: {
+                                drawOnChartArea: false
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+
+            // Chart 2: Region Combo Chart
+            const regionCounts = {};
+            const regionValues = {};
+            data.forEach(row => {
+                regionCounts[row.region] = (regionCounts[row.region] || 0) + 1;
+                regionValues[row.region] = (regionValues[row.region] || 0) + row.value;
+            });
+            const regionEntries = Object.entries(regionCounts).sort((a, b) => b[1] - a[1]);
+            const regionLabels = regionEntries.map(([l]) => l);
+            const regionCountsData = regionEntries.map(([_, v]) => v);
+            const regionValuesData = regionLabels.map(l => regionValues[l]);
+
+            if (charts.region) charts.region.destroy();
+            charts.region = new Chart(document.getElementById('regionChart'), {
+                type: 'bar',
+                data: {
+                    labels: regionLabels,
+                    datasets: [
+                        {
+                            label: 'عدد المخالفات',
+                            type: 'bar',
+                            data: regionCountsData,
+                            backgroundColor: 'rgba(102, 126, 234, 0.7)',
+                            borderColor: 'rgba(102, 126, 234, 1)',
+                            borderWidth: 2,
+                            borderRadius: 5,
+                            order: 2
+                        },
+                        {
+                            label: 'إجمالي القيمة (ر.س)',
+                            type: 'line',
+                            data: regionValuesData,
+                            borderColor: 'rgba(139, 92, 246, 1)',
+                            borderWidth: 3,
+                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                            fill: false,
+                            tension: 0.4,
+                            pointBackgroundColor: 'rgba(139, 92, 246, 1)',
+                            pointRadius: 6,
+                            pointHoverRadius: 8,
+                            order: 1,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: 'top' },
+                        title: { 
+                            display: true, 
+                            text: 'المخالفات حسب المنطقة', 
+                            font: { size: 20, weight: 'bold' }, 
+                            padding: 25 
+                        }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString();
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'عدد المخالفات'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString() + ' ر.س';
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'القيمة (ر.س)'
+                            },
+                            grid: {
+                                drawOnChartArea: false
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Chart 3: Scheme Combo Chart
+            const schemeCounts = {};
+            const schemeValues = {};
+            data.forEach(row => {
+                schemeCounts[row.schemeType] = (schemeCounts[row.schemeType] || 0) + 1;
+                schemeValues[row.schemeType] = (schemeValues[row.schemeType] || 0) + row.value;
+            });
+            const schemeEntries = Object.entries(schemeCounts).sort((a, b) => b[1] - a[1]);
+            const schemeLabels = schemeEntries.map(([l]) => l);
+            const schemeCountsData = schemeEntries.map(([_, v]) => v);
+            const schemeValuesData = schemeLabels.map(l => schemeValues[l]);
+
+            if (charts.scheme) charts.scheme.destroy();
+            charts.scheme = new Chart(document.getElementById('schemeChart'), {
+                type: 'bar',
+                data: {
+                    labels: schemeLabels,
+                    datasets: [
+                        {
+                            label: 'عدد المخالفات',
+                            type: 'bar',
+                            data: schemeCountsData,
+                            backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: 2,
+                            borderRadius: 5,
+                            order: 2
+                        },
+                        {
+                            label: 'إجمالي القيمة (ر.س)',
+                            type: 'line',
+                            data: schemeValuesData,
+                            borderColor: 'rgba(236, 72, 153, 1)',
+                            borderWidth: 3,
+                            backgroundColor: 'rgba(236, 72, 153, 0.1)',
+                            fill: false,
+                            tension: 0.4,
+                            pointBackgroundColor: 'rgba(236, 72, 153, 1)',
+                            pointRadius: 6,
+                            pointHoverRadius: 8,
+                            order: 1,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: 'top' },
+                        title: { 
+                            display: true, 
+                            text: 'المخالفات حسب نوع الاسكيم', 
+                            font: { size: 20, weight: 'bold' }, 
+                            padding: 25 
+                        }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString();
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'عدد المخالفات'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString() + ' ر.س';
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'القيمة (ر.س)'
+                            },
+                            grid: {
+                                drawOnChartArea: false
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Chart 4: Violation Type Chart (أكثر المخالفات تكراراً)
+            const violationTypeCounts = {};
+            data.forEach(row => {
+                violationTypeCounts[row.description] = (violationTypeCounts[row.description] || 0) + 1;
+            });
+            const violationTypeEntries = Object.entries(violationTypeCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+            const violationTypeLabels = violationTypeEntries.map(([l]) => l);
+            const violationTypeValues = violationTypeEntries.map(([_, v]) => v);
+
+            if (charts.violationType) charts.violationType.destroy();
+            charts.violationType = new Chart(document.getElementById('violationTypeChart'), {
+                type: 'bar',
+                data: {
+                    labels: violationTypeLabels,
+                    datasets: [{
+                        label: 'عدد المخالفات',
+                        data: violationTypeValues,
+                        backgroundColor: 'rgba(139, 92, 246, 0.7)',
+                        borderColor: 'rgba(139, 92, 246, 1)',
+                        borderWidth: 2,
+                        borderRadius: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: true, position: 'top' },
+                        title: { 
+                            display: true, 
+                            text: 'أكثر المخالفات تكراراً', 
+                            font: { size: 20, weight: 'bold' }, 
+                            padding: 25 
+                        }
+                    },
+                    scales: {
+                        x: { 
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString();
+                                }
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateTable(data) {
+            const tbody = document.querySelector('#dataTable tbody');
+            tbody.innerHTML = '';
+            data.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${row.region}</td>
+                    <td>${row.violationNumber}</td>
+                    <td style="color: ${row.value > 0 ? (row.value >= 5000 ? '#ef4444' : '#4f46e5') : '#94a3b8'};">${row.value.toLocaleString()} ر.س</td>
+                    <td>${row.date}</td>
+                    <td style="color: ${row.invoiceStatus === 'مسددة' ? '#10b981' : '#ef4444'};">${row.invoiceStatus}</td>
+                    <td>${row.date}</td>
+                    <td>${row.schemeType}</td>
+                    <td>${row.violationNumber}</td>
+                    <td>${row.engineer}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function downloadChartsAsImage() {
+            html2canvas(document.querySelector('.container')).then(canvas => {
+                const link = document.createElement('a');
+                link.href = canvas.toDataURL('image/png');
+                link.download = 'dashboard.png';
+                link.click();
+            });
+        }
+    </script>
+</body>
+</html>
